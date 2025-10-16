@@ -1,4 +1,4 @@
-const { parentPort } = require('worker_threads');
+const {parentPort} = require('worker_threads');
 const mic = require('mic');
 const fs = require('fs');
 const path = require('path');
@@ -15,22 +15,52 @@ const startRecording = (outputDirectory) => {
   const filePath = path.join(outputDirectory, `recording_${timestamp}.wav`);
 
   micInstance = mic({
-    rate: '16000',
-    channels: '1',
-    debug: false,
-    exitOnSilence: 6,
+    rate : '16000',
+    channels : '1',
+    debug : false,
+    exitOnSilence : 6,
   });
 
   micInputStream = micInstance.getAudioStream();
   fileOutputStream = fs.createWriteStream(filePath);
+
+  // Handle EPIPE errors to prevent crashes
+  micInputStream.on('error', (error) => {
+    if (error.code === 'EPIPE') {
+      console.log('Audio stream closed unexpectedly, this is normal');
+    } else {
+      console.error('Audio input stream error:', error);
+    }
+  });
+
+  fileOutputStream.on('error', (error) => {
+    if (error.code === 'EPIPE') {
+      console.log('Audio output stream closed unexpectedly, this is normal');
+    } else {
+      console.error('Audio output stream error:', error);
+    }
+  });
+
   micInputStream.pipe(fileOutputStream);
 
   micInstance.start();
 };
 
 const stopRecording = () => {
+  if (micInputStream) {
+    micInputStream.unpipe();
+    micInputStream.destroy();
+    micInputStream = null;
+  }
+
+  if (fileOutputStream) {
+    fileOutputStream.end();
+    fileOutputStream = null;
+  }
+
   if (micInstance) {
     micInstance.stop();
+    micInstance = null;
   }
 
   if (currentTimeout) {

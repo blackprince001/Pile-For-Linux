@@ -1,24 +1,36 @@
 /* eslint global-require: off, no-console: off, promise/always-return: off */
+import './ipc';
+
 import {
   app,
   BrowserWindow,
-  shell,
-  protocol,
-  net,
   Menu,
   nativeTheme,
+  net,
+  protocol,
   session,
+  shell,
 } from 'electron';
-import MenuBuilder from './menu';
-import { resolveHtmlPath } from './util';
 import fs from 'fs';
 import path from 'path';
-import './ipc';
+
+import MenuBuilder from './menu';
+import {resolveHtmlPath} from './util';
 import AppUpdater from './utils/autoUpdates';
+
+// Handle unhandled promise rejections
+process.on(
+    'unhandledRejection',
+    (reason,
+     promise) => { console.error('Unhandled Promise Rejection:', reason); });
+
+// Handle uncaught exceptions
+process.on('uncaughtException',
+           (error) => { console.error('Uncaught Exception:', error); });
 
 Menu.setApplicationMenu(null);
 
-let mainWindow: BrowserWindow | null = null;
+let mainWindow: BrowserWindow|null = null;
 
 if (process.env.NODE_ENV === 'production') {
   const sourceMapSupport = require('source-map-support');
@@ -26,7 +38,7 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 const isDebug =
-  process.env.NODE_ENV === 'development' || process.env.DEBUG_PROD === 'true';
+    process.env.NODE_ENV === 'development' || process.env.DEBUG_PROD === 'true';
 
 if (isDebug) {
   require('electron-debug')();
@@ -35,14 +47,11 @@ if (isDebug) {
 const installExtensions = async () => {
   const installer = require('electron-devtools-installer');
   const forceDownload = !!process.env.UPGRADE_EXTENSIONS;
-  const extensions = ['REACT_DEVELOPER_TOOLS'];
+  const extensions = [ 'REACT_DEVELOPER_TOOLS' ];
 
   return installer
-    .default(
-      extensions.map((name) => installer[name]),
-      forceDownload
-    )
-    .catch(console.log);
+      .default(extensions.map((name) => installer[name]), forceDownload)
+      .catch(console.log);
 };
 
 const setupPilesFolder = () => {
@@ -60,36 +69,35 @@ const createWindow = async () => {
   }
 
   const RESOURCES_PATH = app.isPackaged
-    ? path.join(process.resourcesPath, 'assets')
-    : path.join(__dirname, '../../assets');
+                             ? path.join(process.resourcesPath, 'assets')
+                             : path.join(__dirname, '../../assets');
 
-  const getAssetPath = (...paths: string[]): string => {
-    return path.join(RESOURCES_PATH, ...paths);
-  };
+  const getAssetPath = (...paths: string[]):
+      string => { return path.join(RESOURCES_PATH, ...paths); };
 
   mainWindow = new BrowserWindow({
-    show: false,
-    width: 960,
-    height: 800,
-    minWidth: 660,
-    minHeight: 660,
-    icon: getAssetPath('icon.png'),
-    webPreferences: {
-      nodeIntegration: true,
-      contextIsolation: true,
-      preload: app.isPackaged
-        ? path.join(__dirname, 'preload.js')
-        : path.join(__dirname, '../../.erb/dll/preload.js'),
+    show : false,
+    width : 960,
+    height : 800,
+    minWidth : 660,
+    minHeight : 660,
+    icon : getAssetPath('icon.png'),
+    webPreferences : {
+      nodeIntegration : true,
+      contextIsolation : true,
+      preload : app.isPackaged
+                    ? path.join(__dirname, 'preload.js')
+                    : path.join(__dirname, '../../.erb/dll/preload.js'),
     },
-    frame: false,
-    titleBarStyle: 'hidden',
-    trafficLightPosition: { x: 18, y: 16 },
-    transparent: process.platform === 'darwin',
-    vibrancy: 'sidebar',
-    titleBarOverlay: {
-      color: '#00000000',
-      symbolColor: nativeTheme.shouldUseDarkColors ? 'white' : 'black',
-      height: 50,
+    frame : false,
+    titleBarStyle : 'hidden',
+    trafficLightPosition : {x : 18, y : 16},
+    transparent : process.platform === 'darwin',
+    vibrancy : 'sidebar',
+    titleBarOverlay : {
+      color : '#00000000',
+      symbolColor : nativeTheme.shouldUseDarkColors ? 'white' : 'black',
+      height : 50,
     },
   });
 
@@ -106,9 +114,7 @@ const createWindow = async () => {
     }
   });
 
-  mainWindow.on('closed', () => {
-    mainWindow = null;
-  });
+  mainWindow.on('closed', () => { mainWindow = null; });
 
   const menuBuilder = new MenuBuilder(mainWindow);
   menuBuilder.buildMenu();
@@ -116,7 +122,7 @@ const createWindow = async () => {
   // Open urls in the user's browser
   mainWindow.webContents.setWindowOpenHandler((edata) => {
     shell.openExternal(edata.url);
-    return { action: 'deny' };
+    return {action : 'deny'};
   });
 
   // setupAutoUpdater(mainWindow);
@@ -135,21 +141,21 @@ app.on('window-all-closed', () => {
   }
 });
 
-app
-  .whenReady()
-  .then(() => {
-    protocol.handle('local', (request) => {
-      const filePath = request.url.slice('local://'.length);
-      return net.fetch('file://' + filePath);
-    });
+app.whenReady()
+    .then(() => {
+      protocol.handle('local', (request) => {
+        const filePath = request.url.slice('local://'.length);
+        return net.fetch('file://' + filePath);
+      });
 
-    setupPilesFolder();
-    createWindow();
+      setupPilesFolder();
+      createWindow();
 
-    app.on('activate', () => {
-      // On macOS it's common to re-create a window in the app when the
-      // dock icon is clicked and there are no other windows open.
-      if (mainWindow === null) createWindow();
-    });
-  })
-  .catch(console.log);
+      app.on('activate', () => {
+        // On macOS it's common to re-create a window in the app when the
+        // dock icon is clicked and there are no other windows open.
+        if (mainWindow === null)
+          createWindow();
+      });
+    })
+    .catch(console.log);

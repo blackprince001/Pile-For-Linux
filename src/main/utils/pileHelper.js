@@ -1,27 +1,25 @@
 const fs = require('fs');
 const path = require('path');
-const { ipcMain } = require('electron');
+const {ipcMain} = require('electron');
 
 class PileHelper {
-  constructor() {
-    this.watcher = null;
-  }
+  constructor() { this.watcher = null; }
 
   watchFolder(path) {
-    if (!path) return;
-    this.watcher = fs.watch(
-      path,
-      { recursive: true },
-      (eventType, filename) => {
-        // When a file changes, emit a message with the file's name and the event type
-        ipcMain.emit('file-updated', { eventType, filename });
-      }
-    );
+    if (!path)
+      return;
+    this.watcher = fs.watch(path, {recursive : true}, (eventType, filename) => {
+      // When a file changes, emit a message with the file's name and the event
+      // type
+      ipcMain.emit('file-updated', {eventType, filename});
+    });
   }
 
   updateFile(path, content) {
     fs.writeFile(path, content, (err) => {
-      if (err) throw err;
+      if (err) {
+        console.error('Error updating file:', path, err);
+      }
     });
   }
 
@@ -50,16 +48,14 @@ class PileHelper {
       return [];
     }
 
-    let entries = await fs.promises.readdir(dirPath, { withFileTypes: true });
-    let files = entries
-      .filter((file) => !file.isDirectory())
-      .map((file) => path.join(dirPath, file.name));
+    let entries = await fs.promises.readdir(dirPath, {withFileTypes : true});
+    let files = entries.filter((file) => !file.isDirectory())
+                    .map((file) => path.join(dirPath, file.name));
     let folders = entries.filter((folder) => folder.isDirectory());
 
     for (let folder of folders) {
       files = files.concat(
-        await this.getFilesInFolder(path.join(dirPath, folder.name))
-      );
+          await this.getFilesInFolder(path.join(dirPath, folder.name)));
     }
 
     return files;

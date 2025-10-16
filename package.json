@@ -31,10 +31,13 @@
     "build:dll": "cross-env NODE_ENV=development TS_NODE_TRANSPILE_ONLY=true webpack --config ./.erb/configs/webpack.config.renderer.dev.dll.ts",
     "build:main": "cross-env NODE_ENV=production TS_NODE_TRANSPILE_ONLY=true webpack --config ./.erb/configs/webpack.config.main.prod.ts",
     "build:renderer": "cross-env NODE_ENV=production TS_NODE_TRANSPILE_ONLY=true webpack --config ./.erb/configs/webpack.config.renderer.prod.ts",
-    "postinstall": "ts-node .erb/scripts/check-native-dep.js && electron-builder install-app-deps && npm run build:dll",
+    "postinstall": "ts-node .erb/scripts/check-native-dep.js && npm run build:dll",
     "lint": "cross-env NODE_ENV=development eslint . --ext .js,.jsx,.ts,.tsx",
     "lint:fix": "cross-env NODE_ENV=development eslint . --ext .js,.jsx,.ts,.tsx --fix",
-    "package": "ts-node ./.erb/scripts/clean.js dist && npm run build && electron-builder build --mac --win --publish never && npm run build:dll",
+    "package": "ts-node ./.erb/scripts/clean.js dist && npm run build && npm run install-app-deps && electron-builder build --mac --win --publish never && npm run build:dll",
+    "package:linux": "ts-node ./.erb/scripts/clean.js dist && npm run build && npm run install-app-deps && electron-builder build --linux --publish never && npm run build:dll",
+    "package:all": "ts-node ./.erb/scripts/clean.js dist && npm run build && npm run install-app-deps && electron-builder build --mac --win --linux --publish never && npm run build:dll",
+    "install-app-deps": "cd release/app && npm install --production --ignore-scripts",
     "release": "ts-node ./.erb/scripts/clean.js dist && npm run build && electron-builder build --publish always && npm run build:dll",
     "rebuild": "electron-rebuild --parallel --types prod,dev,optional --module-dir release/app",
     "prestart": "cross-env NODE_ENV=development TS_NODE_TRANSPILE_ONLY=true webpack --config ./.erb/configs/webpack.config.main.dev.ts",
@@ -213,6 +216,9 @@
       "package.json"
     ],
     "afterSign": ".erb/scripts/notarize.js",
+    "npmRebuild": false,
+    "buildDependenciesFromSource": false,
+    "nodeGypRebuild": false,
     "mac": {
       "target": {
         "target": "default",
@@ -258,9 +264,31 @@
     },
     "linux": {
       "target": [
-        "AppImage"
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        },
+        {
+          "target": "deb",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
       ],
-      "category": "Development"
+      "category": "Office",
+      "description": "A desktop app for reflective journaling",
+      "icon": "assets/icon.png",
+      "maintainer": "Udara <me@udara.io>",
+      "synopsis": "Pile - Reflective journaling with AI",
+      "desktop": {
+        "Name": "Pile",
+        "Comment": "A desktop app for reflective journaling",
+        "Categories": "Office;TextEditor;Utility;"
+      }
     },
     "directories": {
       "app": "release/app",
